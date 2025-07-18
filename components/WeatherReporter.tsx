@@ -25,27 +25,88 @@ export default function WeatherReporter({ onClose, onReportSubmitted }: WeatherR
   const [weatherCode, setWeatherCode] = useState('');
   const [temperature, setTemperature] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get user location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          
+          // Try to get location name
+          try {
+            const response = await fetch(`/api/weather/current?lat=${lat}&lon=${lon}`);
+            const data = await response.json();
+            setLocation({ 
+              lat, 
+              lon, 
+              name: data.location || `${lat.toFixed(4)}, ${lon.toFixed(4)}` 
+            });
+          } catch (error) {
+            setLocation({ lat, lon, name: 'Your Location' });
+          }
+        },
+        (error) => {
+          console.error('Location error:', error);
+        }
+      );
+    }
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!weatherCode) return;
+    if (!weatherCode || !location) return;
     
-    // Simulate XP calculation
-    const baseXP = 10;
-    const tempBonus = temperature ? 5 : 0;
-    const descBonus = description ? 5 : 0;
-    const totalXP = baseXP + tempBonus + descBonus;
+    setLoading(true);
     
-    setSuccess(true);
-    
-    setTimeout(() => {
-      if (onReportSubmitted) {
-        onReportSubmitted(totalXP);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please sign in to submit reports');
       }
-      onClose();
-    }, 1500);
+      
+      const response = await fetch('/api/weather/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          latitude: location.lat,
+          longitude: location.lon,
+          locationName: location.name,
+          weatherCode,
+          temperature: temperature ? parseFloat(temperature) : undefined,
+          description
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit report');
+      }
+      
+      const data = await response.json();
+      const totalXP = data.report.xpAwarded;
+      
+      setSuccess(true);
+      
+      setTimeout(() => {
+        if (onReportSubmitted) {
+          onReportSubmitted(totalXP);
+        }
+        onClose();
+      }, 1500);
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      alert(error.message || 'Failed to submit report');
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -89,6 +150,14 @@ export default function WeatherReporter({ onClose, onReportSubmitted }: WeatherR
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {location && (
+            <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3">
+              <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                📍 Reporting from: {location.name}
+              </p>
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Current Conditions *
@@ -140,10 +209,10 @@ export default function WeatherReporter({ onClose, onReportSubmitted }: WeatherR
 
           <button
             type="submit"
-            disabled={!weatherCode}
+            disabled={!weatherCode || !location || loading}
             className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
-            Submit Weather Report
+            {loading ? 'Submitting...' : 'Submit Weather Report'}
           </button>
         </form>
       </motion.div>
