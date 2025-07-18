@@ -84,7 +84,7 @@ export default function CrowdsourcedWeatherMap({ centerLat = 40.7128, centerLon 
             Live Weather Reports
           </h3>
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {MOCK_REPORTS.length} reports nearby
+            {reports.length} reports nearby
           </span>
         </div>
       </div>
