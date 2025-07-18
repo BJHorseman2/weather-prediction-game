@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  username        String          @unique
+  password        String
+  displayName     String?
+  avatar          String?
+  bio             String?
+  
+  // Gaming stats
+  totalXP         Int             @default(0)
+  level           Int             @default(1)
+  streak          Int             @default(0)
+  lastActiveDate  DateTime?
+  
+  // Weather stats
+  reportsCount    Int             @default(0)
+  predictionsCount Int            @default(0)
+  accuracyRate    Float           @default(0)
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  weatherReports  WeatherReport[]
+  predictions     Prediction[]
+  achievements    UserAchievement[]
+  friends         Friend[]        @relation("UserFriends")
+  friendOf        Friend[]        @relation("FriendOfUser")
+  
+  @@index([totalXP])
+  @@index([username])
+}
+
+model WeatherReport {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  
+  // Location
+  latitude        Float
+  longitude       Float
+  locationName    String?
+  
+  // Weather data
+  condition       String
+  temperature     Float?
+  description     String?
+  
+  // Validation
+  verified        Boolean         @default(false)
+  xpAwarded       Int             @default(10)
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@index([latitude, longitude])
+}
+
+model Prediction {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  
+  // Location
+  latitude        Float
+  longitude       Float
+  
+  // Prediction details
+  targetTime      DateTime
+  windowMinutes   Int             // 15, 30, or 60
+  condition       String
+  confidence      Int             // 0-100
+  
+  // Result
+  actualCondition String?
+  accurate        Boolean?
+  xpAwarded       Int             @default(0)
+  
+  createdAt       DateTime        @default(now())
+  resolvedAt      DateTime?
+  
+  @@index([userId])
+  @@index([targetTime])
+  @@index([createdAt])
+}
+
+model Achievement {
+  id              String          @id @default(cuid())
+  name            String
+  description     String
+  icon            String
+  rarity          String          // common, rare, epic, legendary
+  xpReward        Int
+  
+  // Requirements
+  requirementType String          // reports_count, predictions_count, accuracy, streak, etc.
+  requirementValue Int
+  
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  achievementId   String
+  achievement     Achievement     @relation(fields: [achievementId], references: [id])
+  
+  unlockedAt      DateTime        @default(now())
+  
+  @@unique([userId, achievementId])
+}
+
+model Friend {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation("UserFriends", fields: [userId], references: [id])
+  friendId        String
+  friend          User            @relation("FriendOfUser", fields: [friendId], references: [id])
+  
+  status          String          @default("pending") // pending, accepted, blocked
+  createdAt       DateTime        @default(now())
+  
+  @@unique([userId, friendId])
+  @@index([status])
+}
+
+model Challenge {
+  id              String          @id @default(cuid())
+  name            String
+  description     String
+  type            String          // daily, weekly
+  
+  // Requirements
+  requirementType String          // reports, predictions, accuracy
+  requirementValue Int
+  
+  // Rewards
+  xpReward        Int
+  badgeIcon       String?
+  
+  startDate       DateTime
+  endDate         DateTime
+  
+  @@index([type, startDate, endDate])
+}

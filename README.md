@@ -1,18 +1,27 @@
-# Weather Prediction Game
+# Weather Prediction Game 🌦️
 
-A crowdsourced weather nowcasting app where users can report current conditions and make short-term weather predictions to earn XP points.
+A fun, competitive, and social weather nowcasting game where users report current conditions and make short-term weather predictions to earn XP points and climb the leaderboard!
 
 ## Features
 
+### 🎮 Gaming & Competition
+- **User Authentication**: Sign up and track your progress
+- **XP & Leveling System**: Earn experience points and level up
+- **Global Leaderboards**: Compete with players worldwide (daily, weekly, all-time)
+- **Streak Tracking**: Build daily streaks for bonus rewards
+- **User Profiles**: Track your stats, accuracy rate, and achievements
+
+### 🌡️ Weather Features
 - **Real-time Weather Data**: Displays current weather conditions using multiple weather APIs
 - **Weather Reporting**: Users can report current weather conditions
 - **Nowcast Predictions**: Make 15/30/60 minute weather predictions
-- **XP System**: Earn points for accurate reports and predictions
 - **Location-based**: Uses geolocation to show weather for user's current location
-- **Multiple Data Sources**: 
-  - US National Weather Service (weather.gov) - no API key required
-  - AccuWeather API (with API key)
-  - OpenWeatherMap (fallback)
+- **Accuracy Tracking**: Your predictions are validated against real weather data
+
+### 📊 Data Sources
+- **US National Weather Service** (weather.gov) - no API key required, US only
+- **AccuWeather API** - global coverage with API key
+- **OpenWeatherMap** - fallback option
 
 ## Getting Started
 

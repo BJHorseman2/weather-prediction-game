@@ -2,18 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Toaster } from 'react-hot-toast';
 import WeatherReporter from '@/components/WeatherReporter';
 import NowcastPredictor from '@/components/NowcastPredictor';
 import CrowdsourcedWeatherMap from '@/components/CrowdsourcedWeatherMap';
+import AuthModal from '@/components/AuthModal';
+import Leaderboard from '@/components/Leaderboard';
+import UserProfile from '@/components/UserProfile';
 import { fireConfetti } from '@/lib/confetti';
 
 export default function Home() {
   const [showWeatherReporter, setShowWeatherReporter] = useState(false);
   const [showNowcastPredictor, setShowNowcastPredictor] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [userLocation, setUserLocation] = useState({ lat: 40.7128, lon: -74.0060 });
   const [xpEarnedToday, setXpEarnedToday] = useState(0);
   const [currentWeather, setCurrentWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  // Check for existing user session
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   // Get user location and weather on mount
   useEffect(() => {
@@ -48,13 +62,34 @@ export default function Home() {
   }, []);
 
   const handleReportSubmitted = (xpEarned: number) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     setXpEarnedToday(prev => prev + xpEarned);
+    if (user) {
+      setUser({ ...user, totalXP: user.totalXP + xpEarned });
+    }
     fireConfetti();
   };
 
   const handlePredictionSubmitted = (xpEarned: number) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
     setXpEarnedToday(prev => prev + xpEarned);
+    if (user) {
+      setUser({ ...user, totalXP: user.totalXP + xpEarned });
+    }
     fireConfetti();
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setXpEarnedToday(0);
   };
 
   return (
@@ -66,11 +101,31 @@ export default function Home() {
             <h1 className="text-2xl md:text-3xl font-bold">
               🌦️ Weather Nowcast
             </h1>
-            {xpEarnedToday > 0 && (
-              <div className="bg-green-500/20 px-4 py-2 rounded-lg">
-                <span className="text-green-400 font-bold">+{xpEarnedToday} XP today</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-4">
+              {xpEarnedToday > 0 && (
+                <div className="bg-green-500/20 px-4 py-2 rounded-lg">
+                  <span className="text-green-400 font-bold">+{xpEarnedToday} XP today</span>
+                </div>
+              )}
+              {!user ? (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition-all"
+                >
+                  Sign In to Play
+                </button>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <div className="text-right">
+                    <p className="font-semibold">{user.username}</p>
+                    <p className="text-sm text-gray-300">Level {user.level || 1} • {user.totalXP || 0} XP</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center font-bold">
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -163,8 +218,9 @@ export default function Home() {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Live Reports Map */}
-          <div className="lg:col-span-2">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Live Reports Map */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -176,10 +232,40 @@ export default function Home() {
                 radius={0.2}
               />
             </motion.div>
+
+            {/* Leaderboard */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Leaderboard currentUserId={user?.id} />
+            </motion.div>
           </div>
 
-          {/* Side Panel */}
+          {/* Right Column */}
           <div className="space-y-6">
+            {/* User Profile (if logged in) */}
+            {user && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <UserProfile 
+                  user={{
+                    ...user,
+                    totalXP: user.totalXP || 0,
+                    level: user.level || 1,
+                    streak: user.streak || 0,
+                    reportsCount: user.reportsCount || 0,
+                    predictionsCount: user.predictionsCount || 0,
+                    accuracyRate: user.accuracyRate || 0
+                  }}
+                  onSignOut={handleSignOut}
+                />
+              </motion.div>
+            )}
             {/* How it Works */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -275,6 +361,28 @@ export default function Home() {
           />
         )}
       </AnimatePresence>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(userData) => {
+          setUser(userData);
+          setShowAuthModal(false);
+        }}
+      />
+
+      {/* Toast Notifications */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1f2937',
+            color: '#fff',
+          },
+        }}
+      />
     </div>
   );
 }
