@@ -26,6 +26,35 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
 
     try {
       if (mode === 'signup') {
+        // Validate inputs
+        if (!formData.email || !formData.username || !formData.password) {
+          toast.error('Please fill in all fields');
+          setLoading(false);
+          return;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+          toast.error('Please enter a valid email address');
+          setLoading(false);
+          return;
+        }
+
+        // Username validation
+        if (formData.username.length < 3) {
+          toast.error('Username must be at least 3 characters');
+          setLoading(false);
+          return;
+        }
+
+        // Password validation
+        if (formData.password.length < 6) {
+          toast.error('Password must be at least 6 characters');
+          setLoading(false);
+          return;
+        }
+
         if (formData.password !== formData.confirmPassword) {
           toast.error('Passwords do not match');
           setLoading(false);
@@ -36,29 +65,43 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: formData.email,
-            username: formData.username,
+            email: formData.email.trim().toLowerCase(),
+            username: formData.username.trim(),
             password: formData.password
           })
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+        if (!res.ok) throw new Error(data.message || 'Failed to create account');
         
         toast.success('Account created! Please sign in.');
         setMode('signin');
+        // Reset form
+        setFormData({
+          email: formData.email,
+          username: '',
+          password: '',
+          confirmPassword: ''
+        });
       } else {
+        // Validate sign in inputs
+        if (!formData.email || !formData.password) {
+          toast.error('Please enter your email and password');
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch('/api/auth/signin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: formData.email,
+            email: formData.email.trim().toLowerCase(),
             password: formData.password
           })
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+        if (!res.ok) throw new Error(data.message || 'Invalid credentials');
         
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));

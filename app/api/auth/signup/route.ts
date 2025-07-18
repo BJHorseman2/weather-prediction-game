@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { mockUsers } from '@/lib/mockUsers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,19 +14,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          { username }
-        ]
-      }
-    });
+    // Check if user already exists in mock storage
+    const existingUserByEmail = Array.from(mockUsers.values()).find(u => u.email === email);
+    const existingUserByUsername = Array.from(mockUsers.values()).find(u => u.username === username);
 
-    if (existingUser) {
+    if (existingUserByEmail) {
       return NextResponse.json(
-        { message: existingUser.email === email ? 'Email already in use' : 'Username already taken' },
+        { message: 'Email already in use' },
+        { status: 400 }
+      );
+    }
+
+    if (existingUserByUsername) {
+      return NextResponse.json(
+        { message: 'Username already taken' },
         { status: 400 }
       );
     }
@@ -37,14 +36,25 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        username,
-        password: hashedPassword,
-        displayName: username
-      }
-    });
+    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const user = {
+      id: userId,
+      email: email.toLowerCase(),
+      username,
+      password: hashedPassword,
+      displayName: username,
+      totalXP: 0,
+      level: 1,
+      streak: 0,
+      reportsCount: 0,
+      predictionsCount: 0,
+      accuracyRate: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Store user in mock database
+    mockUsers.set(userId, user);
 
     // Return success (without password)
     const { password: _, ...userWithoutPassword } = user;
@@ -60,7 +70,5 @@ export async function POST(request: NextRequest) {
       { message: 'Failed to create account' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { mockUsers } from '@/lib/mockUsers';
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'weather-game-secret-2024';
 
 export async function POST(request: NextRequest) {
@@ -18,10 +17,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    // Find user in mock storage
+    const user = Array.from(mockUsers.values()).find(u => u.email === email.toLowerCase());
 
     if (!user) {
       return NextResponse.json(
@@ -45,7 +42,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    let newStreak = user.streak;
+    let newStreak = user.streak || 0;
     
     if (lastActive) {
       const lastActiveDate = new Date(lastActive);
@@ -54,7 +51,7 @@ export async function POST(request: NextRequest) {
       
       if (daysDiff === 1) {
         // Consecutive day - increase streak
-        newStreak = user.streak + 1;
+        newStreak = (user.streak || 0) + 1;
       } else if (daysDiff > 1) {
         // Streak broken
         newStreak = 1;
@@ -65,14 +62,11 @@ export async function POST(request: NextRequest) {
       newStreak = 1;
     }
 
-    // Update user
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastActiveDate: new Date(),
-        streak: newStreak
-      }
-    });
+    // Update user in mock storage
+    user.lastActiveDate = new Date().toISOString();
+    user.streak = newStreak;
+    user.updatedAt = new Date().toISOString();
+    mockUsers.set(user.id, user);
 
     // Create JWT token
     const token = jwt.sign(
@@ -99,7 +93,5 @@ export async function POST(request: NextRequest) {
       { message: 'Failed to sign in' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
