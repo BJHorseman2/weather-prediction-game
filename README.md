@@ -29,6 +29,16 @@ A fun, competitive, and social weather nowcasting game where users report curren
 
 - Node.js 18+ 
 - npm or yarn
+- Supabase account (free) for database
+
+### Database Setup
+
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Run the schema from `supabase/schema.sql` in the SQL Editor
+4. Copy your project URL and anon key to `.env.local`
+
+See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed instructions.
 
 ### Installation
 
