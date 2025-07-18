@@ -89,6 +89,20 @@ ACCUWEATHER_API_KEY=your_key_here
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Deployment
+
+### Deploy to Vercel (Recommended)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/BJHorseman2/weather-prediction-game)
+
+1. Click the button above
+2. Add environment variables:
+   - `JWT_SECRET` - Random string for authentication
+   - `ACCUWEATHER_API_KEY` - (Optional) For global weather data
+3. Deploy!
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+
 ## License
 
 MIT

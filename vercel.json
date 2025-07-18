@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
+    "JWT_SECRET": "@jwt_secret",
+    "NEXT_PUBLIC_ACCUWEATHER_API_KEY": "@accuweather_api_key",
+    "ACCUWEATHER_API_KEY": "@accuweather_api_key"
+  }
+}
